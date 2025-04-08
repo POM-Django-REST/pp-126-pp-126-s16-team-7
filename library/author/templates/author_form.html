@@ -1,0 +1,7 @@
+<h2>{{ view.__class__.__name__ == 'AuthorCreateView'|yesno:"Додати автора,Редагувати автора" }}</h2>
+
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Зберегти</button>
+</form>

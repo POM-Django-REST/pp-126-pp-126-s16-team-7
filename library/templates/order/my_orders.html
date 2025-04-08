@@ -1,0 +1,17 @@
+<h2>My Orders</h2>
+
+<ul>
+    {% for order in orders %}
+        <li>
+            {{ order.book.name }} —
+            Created: {{ order.created_at|date:"Y-m-d" }} —
+            Plated end: {{ order.plated_end_at|date:"Y-m-d" }} —
+            {% if not order.end_at %}
+                <strong>Not returned</strong>
+                <a href="{% url 'update_order' order.id %}"><button>Edit</button></a>
+            {% else %}
+                Returned: {{ order.end_at|date:"Y-m-d" }}
+            {% endif %}
+        </li>
+    {% endfor %}
+</ul>

@@ -1,0 +1,20 @@
+<h2>All Orders (Admin)</h2>
+
+<ul>
+    {% for order in orders %}
+        <li>
+            {{ order.book.name }} — {{ order.user.username }} —
+            Created: {{ order.created_at|date:"Y-m-d" }} —
+            Plated end: {{ order.plated_end_at|date:"Y-m-d" }} —
+            {% if not order.end_at %}
+                <form action="{% url 'close_order' order.id %}" method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit">Close</button>
+                </form>
+                <a href="{% url 'update_order' order.id %}"><button>Edit</button></a>
+            {% else %}
+                Returned: {{ order.end_at|date:"Y-m-d" }}
+            {% endif %}
+        </li>
+    {% endfor %}
+</ul>

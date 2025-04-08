@@ -1,0 +1,9 @@
+<h2>Books currently held by user: {{ user.username }}</h2>
+
+<ul>
+    {% for book in books %}
+        <li>{{ book.name }}</li>
+    {% empty %}
+        <li>This user has no books.</li>
+    {% endfor %}
+</ul>
