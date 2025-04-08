@@ -8,6 +8,8 @@ from django.urls import reverse_lazy
 from .forms import BookForm
 from authentication.views import get_current_user
 from django.http import HttpResponse
+from rest_framework import generics
+from .serializers import BookSerializer
 
 @login_required
 def book_list(request):
@@ -61,3 +63,12 @@ class BookUpdateView(BookAccessMixin, UpdateView):
     form_class = BookForm
     template_name = 'book/book_form.html'
     success_url = reverse_lazy('books_list')
+
+
+class BookListCreateView(generics.ListCreateAPIView):
+    queryset = Book.objects.all()
+    serializer_class = BookSerializer
+
+class BookDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Book.objects.all()
+    serializer_class = BookSerializer

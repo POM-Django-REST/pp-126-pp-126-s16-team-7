@@ -1,11 +1,21 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate
 from django.contrib.auth import login as auth_login
-
-from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.http import HttpResponse, HttpResponseForbidden
+from rest_framework.permissions import IsAuthenticated
+from .serializers import CustomUserSerializer, OrderSerializer
+from rest_framework.exceptions import NotFound
+from order.models import Order
 from django.urls import reverse
+from rest_framework import generics
 from authentication.models import CustomUser
 from authentication.forms import UserRegistrationForm, UserLoginForm, UserUpdateForm
+
+def is_librarian(user):
+    if user.role == 1:
+        return True
+    raise PermissionDenied("Доступ заборонено")
 
 def get_current_user(request):
     user_id = request.session.get('user_id')
@@ -25,19 +35,21 @@ def register(request):
             middle_name = form.cleaned_data["middle_name"]
             email = form.cleaned_data["email"]
             password = form.cleaned_data["password"]
-            role = form.cleaned_data["role"]
+            role = int(form.cleaned_data["role"])
 
             if CustomUser.get_by_email(email):
                 return render(request, "authentication/register.html", {"form": form, "error": "Email вже використовується"})
-            user = CustomUser.create(
+            user = CustomUser(
                 email=email, 
-                password=password, 
                 first_name=first_name, 
                 middle_name=middle_name, 
-                last_name=last_name)
+                last_name=last_name,
+                role = int(role))
 
-            user.role = role
+            user.set_password(password) 
             user.is_active = True
+            token = Token.objects.create(user=user)
+            user.token = token
             user.save()
             return redirect("login")
 
@@ -73,16 +85,16 @@ def logout(request):
     return redirect(reverse('login'))
 
 def users_list(request):
+    if request.user.role == 0:
+        return HttpResponseForbidden("🚫 You are not a librarian.")
     current_user = get_current_user(request)
-    if not current_user or current_user.role != 1:
-        return HttpResponse("Access denied. Librarians only.")
+
     users = CustomUser.objects.all()
     return render(request, 'authentication/users_list.html', {'users': users})
 
+@user_passes_test(is_librarian)
 def user_details(request, user_id):
     current_user = get_current_user(request)
-    if not current_user or current_user.role != 1:
-        return HttpResponse("Access denied. Librarians only.")
 
     user = get_object_or_404(CustomUser, id=user_id)
 
@@ -99,3 +111,53 @@ def user_details(request, user_id):
         form = UserUpdateForm(instance=user)
 
     return render(request, 'authentication/user_details.html', {'form': form, 'user': user})
+
+
+class UserCreateView(generics.CreateAPIView):
+    queryset = CustomUser.objects.all()
+    serializer_class = CustomUserSerializer
+
+class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = CustomUser.objects.all()
+    serializer_class = CustomUserSerializer
+
+    def get_object(self):
+        try:
+            return CustomUser.objects.get(id=self.kwargs['id'])
+        except CustomUser.DoesNotExist:
+            raise NotFound(detail="User not found.")
+
+class UserOrderListView(generics.ListAPIView):
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user_id = self.kwargs['id']
+        return Order.objects.filter(user_id=user_id)
+        
+class UserOrderDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        try:
+            return Order.objects.get(user_id=self.kwargs['id'], id=self.kwargs['order_id'])
+        except Order.DoesNotExist:
+            raise NotFound(detail="Order not found.")
+
+    def update(self, request, *args, **kwargs):
+        # custom logic for updating order, if needed
+        return super().update(request, *args, **kwargs)
+
+    def perform_destroy(self, instance):
+        # custom logic for deleting order, if needed
+        instance.delete()
+
+class UserOrderCreateView(generics.CreateAPIView):
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        user = get_object_or_404(CustomUser, id=self.kwargs['id'])
+        serializer.save(user=user)

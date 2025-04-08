@@ -2,10 +2,16 @@ from django import forms
 from authentication.models import CustomUser
 from django.core.exceptions import ValidationError
 
+ROLE_CHOICES = (
+    (0, 'visitor'),
+    (1, 'librarian'),
+)
+
 class UserRegistrationForm(forms.ModelForm):
     email = forms.EmailField(widget=forms.EmailInput(attrs={'type': 'email'}))
     password = forms.CharField(widget=forms.PasswordInput)
     password_confirm = forms.CharField(widget=forms.PasswordInput, label="Confirm Password")
+    role = forms.ChoiceField(choices=ROLE_CHOICES, widget=forms.Select)
 
     class Meta:
         model = CustomUser

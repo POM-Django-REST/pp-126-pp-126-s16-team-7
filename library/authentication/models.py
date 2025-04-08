@@ -1,5 +1,5 @@
 import datetime
-
+from rest_framework.authtoken.models import Token
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
 from django.db import models
@@ -78,6 +78,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     role = models.IntegerField(choices=ROLE_CHOICES, default=0)
     is_active = models.BooleanField(default=False)
     id = models.AutoField(primary_key=True)
+    token = models.OneToOneField(Token, on_delete=models.CASCADE, null=True, blank=True)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
 

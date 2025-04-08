@@ -1,7 +1,10 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
+from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from .models import Order
 from .forms import OrderForm,OrderUpdateForm
+from .serializers import OrderSerializer
 from book.models import Book
 from django.utils import timezone
 
@@ -65,3 +68,21 @@ def close_order(request, order_id):
     order = get_object_or_404(Order, pk=order_id)
     order.update(end_at=timezone.now())
     return redirect('all_orders')
+
+class OrderListView(generics.ListCreateAPIView):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permission_classes = [IsAdminUser]
+
+class OrderDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'id'
+
+class UserOrderListView(generics.ListAPIView):
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user)
